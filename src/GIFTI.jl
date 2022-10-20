@@ -1,7 +1,7 @@
 module GIFTI
 
 using LightXML
-using GeometryTypes: HomogenousMesh, Point3f0, Face, OffsetInteger
+using GeometryBasics: Mesh, Point3f, OffsetInteger, TriangleFace, normals, meta
 using CodecZlib: transcode, GzipDecompressor
 using Base64: base64decode
 
@@ -66,11 +66,10 @@ function parse_nifti_data_array(xml)
         @assert endian == "BigEndian"
         array .= btoh.(array)
     end
-    array
+    return array
 end
 
 function parse_gifti_mesh(xml::XMLElement)
-    arrays = get_elements_by_tagname(xml, "DataArray");
     pointset_arrays = filter(get_elements_by_tagname(xml, "DataArray")) do arr
         attribute(arr, "Intent") == "NIFTI_INTENT_POINTSET"
     end
@@ -93,11 +92,13 @@ function parse_gifti_mesh(xml::XMLElement)
 
     vert_array = parse_nifti_data_array(pointset) ./ 100
     face_array = parse_nifti_data_array(triangles)
-    vertices = reshape(reinterpret(Point3f0, vert_array), (size(vert_array, 2),))
-    faces = reshape(reinterpret(Face{3, OffsetInteger{-1, Int32}}, face_array), (size(face_array, 2),));
-    mesh = HomogenousMesh(vertices, faces)
+    vertices = reshape(reinterpret(Point3f, vert_array), (size(vert_array, 2),))
+    faces = reshape(reinterpret(TriangleFace{OffsetInteger{-1, Int32}}, face_array), (size(face_array, 2),));
+    mesh = Mesh(meta(vertices; normals = normals(vertices, faces)), faces)
+    return mesh
 end
 
 parse_gifti_mesh(doc::XMLDocument) = parse_gifti_mesh(root(doc))
 
+assetpath(files...) = normpath(joinpath(@__DIR__, "..", "test/assets", files...))
 end
