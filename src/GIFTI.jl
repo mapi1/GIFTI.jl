@@ -6,7 +6,7 @@ using CodecZlib: transcode, GzipDecompressor
 using Base64: base64decode
 
 load(io::IO) = parse_gifti_mesh(parse_string(readstring(io)))
-load(fname::String) = parse_gifti_mesh(parse_file(fname))
+load(fname::String) = ispath(fname) ? parse_gifti_mesh(parse_file(fname)) : ArgumentError("There is no file at: $fname")
 
 function parse_nifti_datatype(Tstr::String)
     if Tstr == "NIFTI_TYPE_INT32"
